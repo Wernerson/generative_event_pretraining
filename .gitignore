@@ -1,0 +1,8 @@
+__pycache__/
+src/runs/
+gpt/runs/
+*.tfevents
+events.out.tfevents.*
+IMG_5223.JPG
+IMG_5160.JPG
+Event-Camera-Data-Pre-training/txt/train_file.txt:w
