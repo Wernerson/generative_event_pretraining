@@ -1,0 +1,15 @@
+[submodule "dinov2"]
+	path = dinov2
+	url = https://github.com/facebookresearch/dinov2.git
+[submodule "dinov3"]
+	path = dinov3
+	url = https://github.com/facebookresearch/dinov3.git
+[submodule "Event_Camera_Data_Pre-training"]
+	path = Event_Camera_Data_Pre-training
+	url = https://github.com/Yan98/Event-Camera-Data-Pre-training.git
+[submodule "mem"]
+	path = mem
+	url = https://github.com/tum-vision/mem.git
+[submodule "Event-Camera-Data-Pre-training"]
+	path = Event-Camera-Data-Pre-training
+	url = https://github.com/Yan98/Event-Camera-Data-Pre-training.git
