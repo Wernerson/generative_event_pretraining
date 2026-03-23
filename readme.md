@@ -22,6 +22,15 @@ This repository provides the official implementation for the paper "Generative E
 <!-- TODO: Insert your framework overview image here -->
 ![Framework Overview](overview.png "Framework Overview")
 
+If you find our work and/or code useful, please cite our paper:
+```bibtex
+@inproceedings{cao2026gep,
+  title={Generative Event Pretraining with Foundation Model Alignment},
+  author={Cao, Jianwen and Xing, Jiaxu and Messikommer, Nico and Scaramuzza, Davide},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  year={2026}
+}
+```
 ---
 
 ## 🛠️ Setup
