@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center"> Generative Event Pretraining with Foundation Model Alignment </h1>
   <p align="center">
-    <a href="https://www.linkedin.com/in/jianwen-cao-042730351/">Jianwen Cao</a>
+    <a href="https://jianwencao.github.io/">Jianwen Cao</a>
     ,
     <a href="https://jiaxux.ing/">Jiaxu Xing</a>
     ,
