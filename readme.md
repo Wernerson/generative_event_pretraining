@@ -164,8 +164,8 @@ python src/dep.py
 ## 📦 Pre-trained Models
 
 We provide the pre-trained checkpoints for our event encoder aligned with foundation models:
-*   **Event Encoder Small:** [Download from One Drive]([https://1drv.ms/u/c/bb0e043068938723/IQCsVKmOWWUoTJuPNDoKpqe8AViJKE2y2dHIWYgOAeAfCo8?e=gfgUal])
-*   **Event Encoder Base:** [Download from One Drive]([https://1drv.ms/u/c/bb0e043068938723/IQCoZBwTXRAQS6U9ggfg7O83AfyjQ73eCeHzB6HmqTneQoM?e=27nuhi])
+*   **Event Encoder Small:** [Download from One Drive](https://1drv.ms/u/c/bb0e043068938723/IQCsVKmOWWUoTJuPNDoKpqe8AViJKE2y2dHIWYgOAeAfCo8?e=gfgUal)
+*   **Event Encoder Base:** [Download from One Drive](https://1drv.ms/u/c/bb0e043068938723/IQCoZBwTXRAQS6U9ggfg7O83AfyjQ73eCeHzB6HmqTneQoM?e=27nuhi)
 
 ---
 
