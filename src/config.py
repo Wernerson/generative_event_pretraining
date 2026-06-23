@@ -61,7 +61,8 @@ from torchvision import transforms
 from utils import compute_mean_std
 
 DINOV3_CKPT_PATHS = {
-    "small": "/data/storage/jianwen/cache/dinov3/dinov3_vits16_pretrain_lvd1689m-08c60483.pth",
+    # "small": "/data/storage/jianwen/cache/dinov3/dinov3_vits16_pretrain_lvd1689m-08c60483.pth",
+    "small": "./ckpts/dinov2_vits14_pretrain.pth",
     "base": "/data/storage/jianwen/cache/dinov3/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth",
 }
 
@@ -185,14 +186,14 @@ class SegConfig(Config):
     # ------------------------------------------------------------------ #
 
     def _init_common_options(self):
-        self.device = "cuda:1"
+        self.device = "cuda:0"
         self.data = "event"
         self.type = "EL" if self.data == "event" else "IL"
         self.dataset = "dsec"  # ["dsec", "ddd17"]
         self.eval_only = False
         # self.eval_checkpoint = "/data/storage/jianwen/cache/ckpts/2025-11-14-02:04_seg/epoch8000_0.8904.pt"
         self.eval_checkpoint = None
-        self.manual_encoder_weight_path = "/data/storage/jianwen/cache/ckpt_matters/gra_nima_16x.pt"
+        self.manual_encoder_weight_path = "./ckpts/small.pt"
 
         self.vit = "small"
         self.vit_backbone = "dinov2"  # ["dinov2", "dinov3"]
@@ -203,7 +204,7 @@ class SegConfig(Config):
         self.wd = 1e-5
         self.transformer_lr_mult = 0.1
         self.encoder_lr_mult = 0.01
-        self.batch_size = 16
+        self.batch_size = 4
         self.n_workers = 8
         self.min_lr = 0.0
         self.warmup_steps = 100
@@ -277,7 +278,7 @@ class SegConfig(Config):
     def _apply_mode_overrides(self):
         if self.encoder_mode == "mem":
             self.P = 16
-            self.event_encoder_weight = "/data/storage/jianwen/nimagenet-pt-checkpoint-74.pth"
+            self.event_encoder_weight = "./ckpts/small.pt"
             self.encoder_lr_mult = 0.1
             self.batch_size = 16
             self._align_spatial_to_stride(self.P)
@@ -319,7 +320,7 @@ class SegConfig(Config):
                     self.P = 32
                     self.n_embed = 768
             else:
-                encoder_weight = "/data/storage/jianwen/cache/ckpt_matters/gra_nima_16x.pt"
+                encoder_weight = "./ckpts/small.pt"
                 # transformer_weight = None
 
                 if 'encoder_weight' in locals() and encoder_weight is not None:
@@ -478,7 +479,7 @@ class SegConfig(Config):
 
     def _build_datasets(self):
         if self.dataset == "dsec":
-            dsec_root = "/data/storage/jianwen/DSEC"
+            dsec_root = "/scratch/brunns/data/dsec/"
             if self.encoder_mode == "ecddp":
                 self.train_dataset = DSECECDDPEventDataset(
                     root_dir=dsec_root,
@@ -974,7 +975,7 @@ class SegAggConfig(Config):
 class GraConfig(Config):
     def __init__(self):
         super().__init__()
-        self.device                 = "cuda:1"
+        self.device                 = "cuda:0"
         self.vit                    = "small"   # ["small", "base", "large"， “small+]
         self.vit_backbone           = "dinov2"  # ["dinov2", "dinov3"]
         self.event_backbone         = "vit"     # ["vit", "swin"]
@@ -988,8 +989,8 @@ class GraConfig(Config):
         self.loss_grad_eps          = 1e-8
 
         # Weights
-        self.image_encoder_weight   = torch.load("/data/storage/jianwen/cache/dinov2/dinov2_vits14_reg4_pretrain.pth", map_location="cpu")
-        self.event_encoder_weight   = torch.load("/data/storage/jianwen/cache/dinov2/dinov2_vits14_reg4_pretrain.pth", map_location="cpu")
+        self.image_encoder_weight   = torch.load("./ckpts/dinov2_vits14_pretrain.pth", map_location="cpu")
+        self.event_encoder_weight   = torch.load("./ckpts/small.pt", map_location="cpu")
         self.restore_ckpt           = None
         
         # Model specs
@@ -1079,12 +1080,12 @@ class GraConfig(Config):
                                             CenterCrop((self.DD17_H, self.DD17_W)),
                                         ])
 
-        self.train_dsec_dataset          = DSECPairedDataset(root_dir = "/data/storage/jianwen/DSEC", split="train", transform=self.train_dsec_preprocessors, event_channels=self.event_channels, event_subdir="eventTensor_ecddp_way")
-        self.valid_dsec_dataset          = DSECPairedDataset(root_dir = "/data/storage/jianwen/DSEC", split="test", transform=self.valid_dsec_preprocessors, event_channels=self.event_channels, event_subdir="eventTensor_ecddp_way")
-        self.train_scap_dataset         = SCAPEPairedDataset(root_dir = "/data/storage/jianwen/EventScape", split="train", transform=self.train_scap_preprocessors)
-        self.valid_scap_dataset         = SCAPEPairedDataset(root_dir = "/data/storage/jianwen/EventScape", split="valid", transform=self.valid_scap_preprocessors)
-        self.train_nima_dataset          = NIMAPairedDataset(root_dir = "/data/storage/jianwen/N_ImageNet", split="train", transform=self.train_nima_preprocessors, event_channels=self.event_channels)
-        self.valid_nima_dataset          = NIMAPairedDataset(root_dir = "/data/storage/jianwen/N_ImageNet", split="valid", transform=self.valid_nima_preprocessors, event_channels=self.event_channels)
+        self.train_dsec_dataset          = DSECPairedDataset(root_dir = "/scratch/brunns/data/dsec", split="train", transform=self.train_dsec_preprocessors, event_channels=self.event_channels, event_subdir="eventTensor_ecddp_way")
+        self.valid_dsec_dataset          = DSECPairedDataset(root_dir = "/scratch/brunns/data/dsec", split="test", transform=self.valid_dsec_preprocessors, event_channels=self.event_channels, event_subdir="eventTensor_ecddp_way")
+        # self.train_scap_dataset         = SCAPEPairedDataset(root_dir = "/data/storage/jianwen/EventScape", split="train", transform=self.train_scap_preprocessors)
+        # self.valid_scap_dataset         = SCAPEPairedDataset(root_dir = "/data/storage/jianwen/EventScape", split="valid", transform=self.valid_scap_preprocessors)
+        # self.train_nima_dataset          = NIMAPairedDataset(root_dir = "/data/storage/jianwen/N_ImageNet", split="train", transform=self.train_nima_preprocessors, event_channels=self.event_channels)
+        # self.valid_nima_dataset          = NIMAPairedDataset(root_dir = "/data/storage/jianwen/N_ImageNet", split="valid", transform=self.valid_nima_preprocessors, event_channels=self.event_channels)
         # self.train_bddd_dataset          = BDDPairedDataset(root_dir = "/data/storage/jianwen/bdd100k/paired", split="train", transform=self.train_bddd_preprocessors)
         # self.valid_bddd_dataset          = BDDPairedDataset(root_dir = "/data/storage/jianwen/bdd100k/paired", split="valid", transform=self.valid_bddd_preprocessors)
         # self.train_dd17_dataset          = DDD17PairedDataset(split="train", transform=self.train_dd17_preprocessors)
@@ -1097,10 +1098,10 @@ class GraConfig(Config):
         # compute_mean_std(self.train_bddd_dataset, num_workers=8)
         print(f"train_dsec_dataset length: {len(self.train_dsec_dataset)}")
         print(f"valid_dsec_dataset length: {len(self.valid_dsec_dataset)}")
-        print(f"train_scap_dataset length: {len(self.train_scap_dataset)}")
-        print(f"valid_scap_dataset length: {len(self.valid_scap_dataset)}")
-        print(f"train_nima_dataset length: {len(self.train_nima_dataset)}")
-        print(f"valid_nima_dataset length: {len(self.valid_nima_dataset)}")
+        # print(f"train_scap_dataset length: {len(self.train_scap_dataset)}")
+        # print(f"valid_scap_dataset length: {len(self.valid_scap_dataset)}")
+        # print(f"train_nima_dataset length: {len(self.train_nima_dataset)}")
+        # print(f"valid_nima_dataset length: {len(self.valid_nima_dataset)}")
         # print(f"train_bddd_dataset length: {len(self.train_bddd_dataset)}")
         # print(f"valid_bddd_dataset length: {len(self.valid_bddd_dataset)}")
         # print(f"train_dd17_dataset length: {len(self.train_dd17_dataset)}")

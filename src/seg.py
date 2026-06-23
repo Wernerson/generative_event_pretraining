@@ -44,7 +44,7 @@ from torchinfo import summary
 from torchvision.models import swin_t
 from tqdm import tqdm
 
-from dinov2.models.vision_transformer import vit_small, vit_base, vit_small_plus
+from dinov2.models.vision_transformer import vit_small, vit_base
 from model import Block, Transformer
 from utils import IOU, PixelAccuracy, get_lr, get_param_groups, multiclass_ce_loss, multiclass_dice_loss
 try:
@@ -421,7 +421,7 @@ class SEG(Transformer):
                             img_size=518,
                             block_chunks=0,
                             init_values=1e-6,
-                            num_register_tokens=4,
+                            # num_register_tokens=4,
                         )
                     elif vit_size == "small+":
                         self.event_encoder = vit_small_plus(
@@ -929,9 +929,11 @@ class SEG(Transformer):
         with self.amp:
             pred, loss = self.forward(x, y)
         main_pred = pred[0] if isinstance(pred, tuple) else pred
-        
+
+        torch.use_deterministic_algorithms(False)
         self.scaler.scale(loss).backward()
         self.scaler.unscale_(self.optimizer)
+        torch.use_deterministic_algorithms(True)
         grad_norm = nn.utils.clip_grad_norm_(parameters=self.parameters(), max_norm=1.,)
         nn.utils.clip_grad_value_(self.parameters(), clip_value=0.5)
         self.scaler.step(self.optimizer)
@@ -1028,7 +1030,7 @@ class SEG(Transformer):
             "epoch": step,}
         if not self.is_ecddp and self.pyramid_head is not None:
             param_dict["pyramid_head"] = self.pyramid_head.state_dict()
-        model_save_path = f"/data/storage/jianwen/cache/ckpts/{self.now}_seg"
+        model_save_path = f"./ckpts/{self.now}_seg"
         os.makedirs(model_save_path, exist_ok=True)
         print(f"------------------------- saving model to: {model_save_path}")
         torch.save(param_dict, os.path.join(model_save_path, f"epoch{step + 1}_{valid_loss:.4f}.pt"))

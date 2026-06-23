@@ -39,7 +39,8 @@ class DSECPairedDataset(Dataset):
         for subfolder in sorted(os.listdir(root)):
             self.image_names.extend(sorted(glob.glob(os.path.join(root, subfolder, "images", "left", "warpped", "*.png"))))
             if self.event_channels == 20:
-                self.event_names.extend(sorted(glob.glob(os.path.join(root, subfolder, "images", "left", event_subdir, "*.pt"))))
+                # self.event_names.extend(sorted(glob.glob(os.path.join(root, subfolder, "images", "left", event_subdir, "*.pt"))))
+                self.event_names.extend(sorted(glob.glob(os.path.join(root, subfolder, "images", "left", "eventToken", "*.pt"))))
             else:
                 self.event_names.extend(sorted(glob.glob(os.path.join(root, subfolder, "images", "left", event_subdir, "*.png"))))
 
@@ -389,9 +390,12 @@ class DSECSegmentDataset(Dataset):
         for subfolder in sorted(os.listdir(seman_root)):
             data_type = "eventImage" if data == "event" else "warpped"
             self.input_names.extend(sorted(glob.glob(os.path.join(input_root, subfolder, "images", "left", data_type, "*.png"))))
-            self.label_names.extend(sorted(glob.glob(os.path.join(seman_root, subfolder, f"{C}classes_renamed", "*.png"))))
-            
-        assert len(self.input_names) == len(self.label_names), "Number of images and events must match"
+            self.label_names.extend(sorted(glob.glob(os.path.join(seman_root, subfolder, f"{C}classes", "*.png"))))
+
+        if len(self.label_names) >= len(self.input_names): # hack to allow less data frames (due to cut videos)
+            self.label_names = self.label_names[:len(self.input_names)]
+
+        assert len(self.input_names) == len(self.label_names), f"Number of images ({len(self.input_names)}) and labels ({len(self.label_names)}) must match"
         self.transform = transform
     
     def __len__(self):
@@ -2107,7 +2111,7 @@ class RandomResizedCrop:
         Returns:
             tuple: top, left, height, width for cropping
         """
-        _, height, width = img.shape
+        height, width = img.shape
         area = height * width
         
         log_ratio = torch.log(torch.tensor(self.ratio))

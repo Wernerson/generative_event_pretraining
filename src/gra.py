@@ -42,7 +42,7 @@ from torchinfo import summary
 from tqdm import tqdm
 
 from torchvision.models import swin_t, Swin_T_Weights
-from dinov2.models.vision_transformer import vit_large, vit_small, vit_base, vit_small_plus
+from dinov2.models.vision_transformer import vit_large, vit_small, vit_base
 from model import Transformer
 from utils import get_lr, get_param_groups, info_nce_loss, kl_loss
 from model import Block
@@ -110,7 +110,7 @@ class Gra(Transformer):
             self.image_encoder = builder(pretrained=False)
         else:
             if teacher_vit == "small":
-                self.image_encoder  = vit_small(patch_size=14, img_size=518, block_chunks=0, init_values=1e-6, num_register_tokens=4)
+                self.image_encoder  = vit_small(patch_size=14, img_size=518, block_chunks=0, init_values=1e-6)
             elif teacher_vit == "large":
                 self.image_encoder  = vit_large(patch_size=14, img_size=518, block_chunks=0, init_values=1e-6, num_register_tokens=4)
             elif teacher_vit == "base":
@@ -232,10 +232,10 @@ class Gra(Transformer):
         # training related
         self.train_dsec_dataloader       = torch.utils.data.DataLoader(self.config.train_dsec_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
         self.valid_dsec_dataloader       = torch.utils.data.DataLoader(self.config.valid_dsec_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
-        self.train_scap_dataloader      = torch.utils.data.DataLoader(self.config.train_scap_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
-        self.valid_scap_dataloader      = torch.utils.data.DataLoader(self.config.valid_scap_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
-        self.train_nima_dataloader       = torch.utils.data.DataLoader(self.config.train_nima_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
-        self.valid_nima_dataloader       = torch.utils.data.DataLoader(self.config.valid_nima_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
+        # self.train_scap_dataloader      = torch.utils.data.DataLoader(self.config.train_scap_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
+        # self.valid_scap_dataloader      = torch.utils.data.DataLoader(self.config.valid_scap_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
+        # self.train_nima_dataloader       = torch.utils.data.DataLoader(self.config.train_nima_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
+        # self.valid_nima_dataloader       = torch.utils.data.DataLoader(self.config.valid_nima_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
         # self.train_bddd_dataloader       = torch.utils.data.DataLoader(self.config.train_bddd_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
         # self.valid_bddd_dataloader       = torch.utils.data.DataLoader(self.config.valid_bddd_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
         # self.train_dd17_dataloader       = torch.utils.data.DataLoader(self.config.train_dd17_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=self.config.n_workers, pin_memory=True, drop_last=False)
@@ -621,8 +621,8 @@ class Gra(Transformer):
 
     def start(self):
         self.dsec_iter = iter(self.train_dsec_dataloader)
-        self.scap_iter = iter(self.train_scap_dataloader)
-        self.nima_iter = iter(self.train_nima_dataloader)
+        # self.scap_iter = iter(self.train_scap_dataloader)
+        # self.nima_iter = iter(self.train_nima_dataloader)
         # self.bddd_iter = iter(self.train_bddd_dataloader)
         # self.dd17_iter = iter(self.train_dd17_dataloader)
 
@@ -648,8 +648,8 @@ class Gra(Transformer):
                 event, image, H, W, dataset = self.get_batch(step)
             except StopIteration:
                 self.dsec_iter = iter(self.train_dsec_dataloader)
-                self.scap_iter = iter(self.train_scap_dataloader)
-                self.nima_iter = iter(self.train_nima_dataloader)
+                # self.scap_iter = iter(self.train_scap_dataloader)
+                # self.nima_iter = iter(self.train_nima_dataloader)
                 # self.bddd_iter = iter(self.train_bddd_dataloader)
                 # self.dd17_iter = iter(self.train_dd17_dataloader)
                 event, image, H, W, dataset = self.get_batch(step)

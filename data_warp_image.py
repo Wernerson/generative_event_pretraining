@@ -207,7 +207,7 @@ if __name__ == "__main__":
     args.image_root = os.path.join(args.root, f"{args.mode}_images")
     args.events_root = os.path.join(args.root, f"{args.mode}_events")
     args.calib_root = os.path.join(args.root, f"{args.mode}_calibration")
-    sementatic_subfolders = os.listdir("/data/storage/jianwen/DSEC/train_semantic_segmentation/train")
+    sementatic_subfolders = os.listdir("/scratch/brunns/data/dsec/train_semantic_segmentation/train")
     for folder in sorted(os.listdir(args.image_root)):
         if folder not in sementatic_subfolders:
             continue

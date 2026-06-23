@@ -21,7 +21,7 @@ from dataset import PadToMinSide, PairedProcessor, Normalize, RandomCrop, Random
 
 # --- 1. 配置模块 ---
 # !! 重要: 请在此处修改为包含所有 dir* 文件夹的顶级'data'目录的绝对路径 !!
-TOP_LEVEL_DATA_DIR = '/data/storage/jianwen/ddd17_seg/data'
+TOP_LEVEL_DATA_DIR = './data'
 
 # --- 2. 数据加载模块 ---
 
