@@ -111,6 +111,7 @@ class Processor():
         start_timestamp = event_slicer.get_start_time_us()
         end_timestamp = event_slicer.get_final_time_us()
         duration = (end_timestamp - start_timestamp)
+        duration = min(end_timestamp - start_timestamp, 5 * 1_000_000)  # cap at 5s (in microseconds)
         event_dict = event_slicer.get_events(start_timestamp, start_timestamp + duration)
         t = event_dict["t"]
         unique_moments, unique_index = np.unique(t, return_index=True)
@@ -388,9 +389,8 @@ class Processor():
                                                     ])
         self.image_encoder = vit_small(patch_size=14, img_size=518, block_chunks=0, init_values=1e-6).to(self.device)
         self.event_encoder = vit_small(patch_size=14, img_size=518, block_chunks=0, init_values=1e-6).to(self.device)
-        self.image_encoder.load_state_dict(torch.load("/data/storage/jianwen/cache/dinov2/dinov2_vits14_pretrain.pth", weights_only=True), strict=True)
-        # self.event_encoder.load_state_dict(torch.load("/data/storage/jianwen/cache/dinov2/dinov2_vits14_pretrain.pth", weights_only=True), strict=True)
-        self.event_encoder.load_state_dict(torch.load("/data/storage/jianwen/cache/ckpt_matters/gra_mixture_16x.pt", weights_only=True)["event_encoder"], strict=True)
+        self.image_encoder.load_state_dict(torch.load("./ckpts/dinov2_vits14_pretrain.pth", weights_only=True, map_location=self.device), strict=True)
+        self.event_encoder.load_state_dict(torch.load("./ckpts/small.pt", weights_only=True, map_location=self.device)["event_encoder"], strict=True)
         self.image_encoder.eval()
         self.event_encoder.eval()
 
