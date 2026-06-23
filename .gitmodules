@@ -13,3 +13,6 @@
 [submodule "Event-Camera-Data-Pre-training"]
 	path = Event-Camera-Data-Pre-training
 	url = https://github.com/Yan98/Event-Camera-Data-Pre-training.git
+[submodule "Event-Camera-Data-Dense-Pre-training"]
+	path = Event-Camera-Data-Dense-Pre-training
+	url = https://github.com/Yan98/Event-Camera-Data-Dense-Pre-training.git
