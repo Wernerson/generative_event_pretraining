@@ -193,9 +193,9 @@ class SegConfig(Config):
         self.eval_only = False
         # self.eval_checkpoint = "/data/storage/jianwen/cache/ckpts/2025-11-14-02:04_seg/epoch8000_0.8904.pt"
         self.eval_checkpoint = None
-        self.manual_encoder_weight_path = "./ckpts/small.pt"
+        self.manual_encoder_weight_path = "./ckpts/base.pt"
 
-        self.vit = "small"
+        self.vit = "base"
         self.vit_backbone = "dinov2"  # ["dinov2", "dinov3"]
         self.dinov3_ckpt_paths = dict(DINOV3_CKPT_PATHS)
 
@@ -204,7 +204,7 @@ class SegConfig(Config):
         self.wd = 1e-5
         self.transformer_lr_mult = 0.1
         self.encoder_lr_mult = 0.01
-        self.batch_size = 4
+        self.batch_size = 2
         self.n_workers = 8
         self.min_lr = 0.0
         self.warmup_steps = 100
@@ -320,7 +320,7 @@ class SegConfig(Config):
                     self.P = 32
                     self.n_embed = 768
             else:
-                encoder_weight = "./ckpts/small.pt"
+                encoder_weight = "./ckpts/base.pt"
                 # transformer_weight = None
 
                 if 'encoder_weight' in locals() and encoder_weight is not None:
