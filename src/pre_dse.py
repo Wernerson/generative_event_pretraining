@@ -177,7 +177,7 @@ class Processor():
         t_start = event_slicer.get_start_time_us()
         t_end = event_slicer.get_final_time_us()
 
-        for batch in tqdm(event_slicer.iter_events_batched(t_start, t_end)):
+        for batch in tqdm(event_slicer.iter_events_batched(t_start, t_end), total=len(image_dict)):
             if j >= len(image_dict):
                 break
             t_b, x_b, y_b, p_b = batch["t"], batch["x"], batch["y"], batch["p"]
