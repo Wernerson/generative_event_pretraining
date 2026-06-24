@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch.nn.functional as F
 import math
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Iterator
 import h5py
 from numba import jit
 import numpy as np
@@ -679,9 +679,24 @@ class EventSlicer:
         # Again add t_offset to get gps time
         events['t'] = time_array_conservative[idx_start_offset:idx_end_offset] + self.t_offset
         for dset_str in ['p', 'x', 'y']:
-            events[dset_str] = np.asarray(self.events[dset_str][t_start_us_idx:t_end_us_idx])
+            events[dset_str] = self.events[dset_str][t_start_us_idx:t_end_us_idx]
             assert events[dset_str].size == events['t'].size
         return events
+
+    def iter_events_batched(
+        self,
+        t_start_us: int,
+        t_end_us: int,
+        batch_duration_us: int = 50_000,
+    ) -> Iterator[Dict[str, np.ndarray]]:
+        """Yield events in fixed-duration time windows to avoid loading all events at once."""
+        t = t_start_us
+        while t < t_end_us:
+            t_next = min(t + batch_duration_us, t_end_us)
+            events = self.get_events(t, t_next)
+            if events is not None and events['t'].size > 0:
+                yield events
+            t = t_next
 
 
     @staticmethod

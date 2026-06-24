@@ -95,36 +95,22 @@ class Processor():
     def load_event_image(self, image_dir, event_dir, image_timestamp_dir):
         """
             Args:
-                event_root       str: Event data file, should be a h5 file.
-                image_dir       str: Image data folder.
+                event_dir        str: Event data file, should be a h5 file.
+                image_dir        str: Image data folder.
             Returns:
-                event_dict      dict: {"t": np.ndarray, "p": np.ndarray, "x": np.ndarray, "y": np.ndarray}
-                unique_index    list: The index of unique moments in the event data t.
+                event_slicer:   EventSlicer over the open h5 file (caller must close event_slicer.h5f)
                 image_names:    list(dict): [{"image_name": image_name str, "image_timestamp": image_timestamp np.ndarray}]
         """
         image_names     = sorted(glob.glob(os.path.join(image_dir, "*.png")))
         image_timestamp = np.loadtxt(image_timestamp_dir, dtype=np.int64)
         image_dict = [{"image_name": image_names[i], "image_timestamp": image_timestamp[i].item()} for i in range(len(image_names))]
 
-        event = h5py.File(event_dir, "r")
-        event_slicer = EventSlicer(event)
-        start_timestamp = event_slicer.get_start_time_us()
-        end_timestamp = event_slicer.get_final_time_us()
-        duration = (end_timestamp - start_timestamp)
-        duration = min(end_timestamp - start_timestamp, 5 * 1_000_000)  # cap at 5s (in microseconds)
-        event_dict = event_slicer.get_events(start_timestamp, start_timestamp + duration)
-        t = event_dict["t"]
-        unique_moments, unique_index = np.unique(t, return_index=True)
-        event_dict["unique_index"] = unique_index
-        
-        print(f"num of events: {t.shape[0]}")
-        print(f"num of unique moments: {unique_moments.shape[0]}")
-        print(f"event start timestamp: {t[0]}, end_timestamp: {t[-1]}, duration in sec: {(t[-1] - t[0]) / 1e6:.4f}s, in microseconds: {t[-1] - t[0]}us")
-        print(f"image start timestamp: {image_dict[0]['image_timestamp']}, end_timestamp: {image_dict[-1]['image_timestamp']}")
-        print(f"event fps: {len(unique_moments) / (end_timestamp - start_timestamp) * 1e6}")
-        print(f"image fps: {len(image_dict) / (end_timestamp - start_timestamp) * 1e6}")
+        event_file = h5py.File(event_dir, "r")
+        event_slicer = EventSlicer(event_file)
+
         print(f"num of images: {len(image_dict)}")
-        return event_dict, image_dict
+        print(f"image start timestamp: {image_dict[0]['image_timestamp']}, end_timestamp: {image_dict[-1]['image_timestamp']}")
+        return event_slicer, image_dict
     
     def _get_camera(self, calib_dir) -> np.ndarray:
         def create_transform(R: np.ndarray, t: np.ndarray) -> np.ndarray:
@@ -181,61 +167,70 @@ class Processor():
         return H_homography, K_event, K_dist, dist_coeffs, resolution, Re
     
     @torch.no_grad()
-    def save_warpped_event_pair(self, event_dict, image_dict, calib_dir, eventImage_dir, warpped_dir, vis_dir, label_dir):
-        t, x, y, p = event_dict["t"], event_dict["x"], event_dict["y"], event_dict["p"]
+    def save_warpped_event_pair(self, event_slicer, image_dict, calib_dir, eventImage_dir, warpped_dir, vis_dir, label_dir):
         accu_x, accu_y, accu_p = [], [], []
         j = 0
         H_homography, K_event, K_dist, dist_coeffs, resolution, Re = self._get_camera(calib_dir)
         W, H = resolution
-        unique_index = event_dict["unique_index"]
-        for i in tqdm(range(len(unique_index) - 1)):
-            if j == len(image_dict):
+        mapping = cv2.initUndistortRectifyMap(K_dist, dist_coeffs, Re, K_event, resolution, cv2.CV_32FC2)[0]
+
+        t_start = event_slicer.get_start_time_us()
+        t_end = event_slicer.get_final_time_us()
+
+        for batch in tqdm(event_slicer.iter_events_batched(t_start, t_end)):
+            if j >= len(image_dict):
                 break
-            accu_x.extend(x[unique_index[i]: unique_index[i+1]])
-            accu_y.extend(y[unique_index[i]: unique_index[i+1]])
-            accu_p.extend(p[unique_index[i]: unique_index[i+1]])
-            # event_tokens = []
-            current_image_timestamp = image_dict[j]["image_timestamp"]
-            next_image_timestamp = image_dict[j + 1]["image_timestamp"] if (j + 1) < len(image_dict) else image_dict[j]["image_timestamp"]
-            middle_timestamp = (current_image_timestamp + next_image_timestamp) / 2
-            current_event_timestamp = t[unique_index[i]]
+            t_b, x_b, y_b, p_b = batch["t"], batch["x"], batch["y"], batch["p"]
+            _, unique_index_b = np.unique(t_b, return_index=True)
+            unique_index_b = np.append(unique_index_b, len(t_b))
 
-            if current_event_timestamp > middle_timestamp:
-                # 1. warp the intensity image FIRST so we can pass its gray frame to G
-                image          = cv2.imread(image_dict[j]["image_name"])
-                warped         = cv2.warpPerspective(image, H_homography, (W, H),
-                                                    flags=cv2.INTER_LINEAR,
-                                                    borderMode=cv2.BORDER_CONSTANT)
+            for i in range(len(unique_index_b) - 1):
+                if j >= len(image_dict):
+                    break
+                accu_x.extend(x_b[unique_index_b[i]: unique_index_b[i+1]])
+                accu_y.extend(y_b[unique_index_b[i]: unique_index_b[i+1]])
+                accu_p.extend(p_b[unique_index_b[i]: unique_index_b[i+1]])
+                # event_tokens = []
+                current_image_timestamp = image_dict[j]["image_timestamp"]
+                next_image_timestamp = image_dict[j + 1]["image_timestamp"] if (j + 1) < len(image_dict) else image_dict[j]["image_timestamp"]
+                middle_timestamp = (current_image_timestamp + next_image_timestamp) / 2
+                current_event_timestamp = t_b[unique_index_b[i]]
 
-                # 2. build RGB event frame
-                mapping = cv2.initUndistortRectifyMap(K_dist, dist_coeffs, Re, K_event, resolution, cv2.CV_32FC2)[0]
-                event_frame = accumulate_to_rgb(
-                    np.array(accu_x), np.array(accu_y), np.array(accu_p),
-                    (H, W),
-                    pct=90,                         # 99th-percentile clip
-                )
+                if current_event_timestamp > middle_timestamp:
+                    # 1. warp the intensity image FIRST so we can pass its gray frame to G
+                    image          = cv2.imread(image_dict[j]["image_name"])
+                    warped         = cv2.warpPerspective(image, H_homography, (W, H),
+                                                        flags=cv2.INTER_LINEAR,
+                                                        borderMode=cv2.BORDER_CONSTANT)
 
-                event_frame = cv2.remap(event_frame, mapping, None, interpolation=cv2.INTER_CUBIC)
-                
-                # 4. save both outputs
-                cv2.imwrite(os.path.join(eventImage_dir, f"{current_image_timestamp}.png"), event_frame)
-                cv2.imwrite(os.path.join(warpped_dir, f"{current_image_timestamp}.png"), warped)
+                    # 2. build RGB event frame
+                    event_frame = accumulate_to_rgb(
+                        np.array(accu_x), np.array(accu_y), np.array(accu_p),
+                        (H, W),
+                        pct=90,                         # 99th-percentile clip
+                    )
 
-                # save additional label vis
-                label = os.path.join(label_dir, f"{current_image_timestamp}.png")
-                if os.path.exists(label):
-                    label = cv2.imread(label)
-                    label = ((label - label.min()) / (label.max() - label.min())) * 255
-                    # concatenate side-by-side for quick visual check
-                    try:
-                        vis_img = np.concatenate([event_frame, warped, label], axis=1)
-                        cv2.imwrite(os.path.join(vis_dir, f"{current_image_timestamp}.png"), vis_img)
-                    except Exception:
-                        pass  # ignore visualization errors
+                    event_frame = cv2.remap(event_frame, mapping, None, interpolation=cv2.INTER_CUBIC)
 
-                # 5. reset
-                accu_x, accu_y, accu_p = [], [], []
-                j += 1
+                    # 4. save both outputs
+                    cv2.imwrite(os.path.join(eventImage_dir, f"{current_image_timestamp}.png"), event_frame)
+                    cv2.imwrite(os.path.join(warpped_dir, f"{current_image_timestamp}.png"), warped)
+
+                    # save additional label vis
+                    label = os.path.join(label_dir, f"{current_image_timestamp}.png")
+                    if os.path.exists(label):
+                        label = cv2.imread(label)
+                        label = ((label - label.min()) / (label.max() - label.min())) * 255
+                        # concatenate side-by-side for quick visual check
+                        try:
+                            vis_img = np.concatenate([event_frame, warped, label], axis=1)
+                            cv2.imwrite(os.path.join(vis_dir, f"{current_image_timestamp}.png"), vis_img)
+                        except Exception:
+                            pass  # ignore visualization errors
+
+                    # 5. reset
+                    accu_x, accu_y, accu_p = [], [], []
+                    j += 1
         
     def _process_subfolder(self, subfolder):
         print("---------------------------------- processing folder:", subfolder)
@@ -274,8 +269,11 @@ class Processor():
         print(f"warpped images will be saved in:        {warpped_dir}")
         print(f"accumulated events will be saved in:    {eventImage_dir}")
 
-        event_dict, image_dict = self.load_event_image(image_dir, event_dir, image_timestamp_dir)
-        self.save_warpped_event_pair(event_dict, image_dict, calib_dir, eventImage_dir, warpped_dir, vis_dir, label_dir)
+        event_slicer, image_dict = self.load_event_image(image_dir, event_dir, image_timestamp_dir)
+        try:
+            self.save_warpped_event_pair(event_slicer, image_dict, calib_dir, eventImage_dir, warpped_dir, vis_dir, label_dir)
+        finally:
+            event_slicer.h5f.close()
         return subfolder
 
     def run(self, subfolders=None, n_workers=1):
@@ -446,7 +444,7 @@ if __name__ == "__main__":
 
         processor = Processor(args)
         subfolders = os.listdir(processor.sementatic_root)
-        # processor.run(n_workers=args.workers)
+        processor.run(n_workers=args.workers)
         processor.process_tokens(workers=args.workers)
         # processor.compute_rgb_stats(save_to=args.stats_out, workers=args.workers)
 
